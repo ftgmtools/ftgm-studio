@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Salman DRM — Super Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo brand-title">SALMAN DRM · ADMIN</div>
+    <div class="nav-item active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+    <div class="nav-item" data-tab="creators"><i class="fa-solid fa-users-gear"></i> Creators</div>
+    <div class="nav-item" data-tab="students"><i class="fa-solid fa-user-graduate"></i> All Students</div>
+    <div class="nav-item" data-tab="courses"><i class="fa-solid fa-book-open"></i> All Courses</div>
+    <div class="nav-item" data-tab="licenses"><i class="fa-solid fa-key"></i> All License Keys</div>
+    <div class="nav-item" data-tab="notifications"><i class="fa-solid fa-bullhorn"></i> Notifications</div>
+    <div class="nav-item" data-tab="settings"><i class="fa-solid fa-sliders"></i> Site Settings</div>
+    <div style="margin-top:auto">
+      <div class="nav-item" id="logoutBtn" style="color:#fca5a5"><i class="fa-solid fa-right-from-bracket"></i> Sign out</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="flex center gap-12">
+        <button class="btn btn-icon menu-btn"><i class="fa-solid fa-bars"></i></button>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="actions">
+        <span class="badge info"><i class="fa-solid fa-crown"></i> Super Admin</span>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section data-panel="dashboard">
+      <div class="grid cols-4" id="statGrid"></div>
+      <div class="grid cols-2 mt-24">
+        <div class="card">
+          <h3><i class="fa-solid fa-user-plus"></i> Recent Creators</h3>
+          <div id="recentCreators"></div>
+        </div>
+        <div class="card">
+          <h3><i class="fa-solid fa-bell"></i> Recent Notifications</h3>
+          <div id="recentNotifs"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREATORS -->
+    <section data-panel="creators" class="hidden">
+      <div class="card mb-16">
+        <div class="flex between center" style="flex-wrap:wrap;gap:10px">
+          <div>
+            <h3 style="margin:0"><i class="fa-solid fa-users-gear"></i> Manage Creators</h3>
+            <div class="muted text-sm">Create, extend, block or delete creator accounts.</div>
+          </div>
+          <button class="btn btn-primary" id="newCreatorBtn"><i class="fa-solid fa-plus"></i> New Creator</button>
+        </div>
+      </div>
+      <div id="creatorsList"></div>
+    </section>
+
+    <!-- ALL STUDENTS -->
+    <section data-panel="students" class="hidden">
+      <div class="card"><h3><i class="fa-solid fa-user-graduate"></i> All Students (across creators)</h3>
+        <div class="table-wrap"><table class="tbl"><thead>
+          <tr><th>Email</th><th>Name</th><th>Creator</th><th>Status</th><th></th></tr>
+        </thead><tbody id="allStudentsBody"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ALL COURSES -->
+    <section data-panel="courses" class="hidden">
+      <div class="card"><h3><i class="fa-solid fa-book-open"></i> All Courses</h3>
+        <div class="grid cols-3" id="allCoursesGrid"></div>
+      </div>
+    </section>
+
+    <!-- ALL LICENSES -->
+    <section data-panel="licenses" class="hidden">
+      <div class="card"><h3><i class="fa-solid fa-key"></i> All License Keys</h3>
+        <div class="table-wrap"><table class="tbl"><thead>
+          <tr><th>Key</th><th>Course</th><th>Creator</th><th>Status</th><th>Device</th></tr>
+        </thead><tbody id="allLicBody"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- NOTIFICATIONS -->
+    <section data-panel="notifications" class="hidden">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3><i class="fa-solid fa-paper-plane"></i> Send Notification</h3>
+          <label>Title</label><input class="input" id="ntTitle" placeholder="e.g. New feature launched" />
+          <label>Message</label><textarea class="input" id="ntBody" placeholder="Write your message…"></textarea>
+          <label>Target</label>
+          <select id="ntTarget">
+            <option value="all">All creators</option>
+            <option value="one">Specific creator</option>
+          </select>
+          <div id="ntCreatorWrap" class="hidden">
+            <label>Creator</label>
+            <select id="ntCreator"></select>
+          </div>
+          <button class="btn btn-primary mt-16" id="ntSend"><i class="fa-solid fa-paper-plane"></i> Send</button>
+        </div>
+        <div class="card">
+          <h3><i class="fa-solid fa-clock-rotate-left"></i> History</h3>
+          <div id="notifHistory"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section data-panel="settings" class="hidden">
+      <div class="card">
+        <h3><i class="fa-solid fa-sliders"></i> Global Site Settings</h3>
+        <label>User Panel Title</label>
+        <input class="input" id="stTitle" placeholder="Salman DRM Premium Courses" />
+        <label>Announcement Banner (leave empty to hide)</label>
+        <input class="input" id="stAnnounce" placeholder="🎉 Welcome to Salman DRM…" />
+        <label>Footer Text</label>
+        <input class="input" id="stFooterText" placeholder="© 2025 Salman DRM. All rights reserved." />
+
+        <div class="divider"></div>
+        <h3><i class="fa-solid fa-link"></i> Footer Buttons</h3>
+        <div id="stBtns"></div>
+        <button class="btn btn-sm mt-8" id="addBtnBtn"><i class="fa-solid fa-plus"></i> Add button</button>
+
+        <div class="divider"></div>
+        <h3><i class="fa-solid fa-anchor"></i> Footer Links</h3>
+        <div id="stLinks"></div>
+        <button class="btn btn-sm mt-8" id="addLinkBtn"><i class="fa-solid fa-plus"></i> Add link</button>
+
+        <div class="mt-24 flex gap-12">
+          <button class="btn btn-primary" id="saveSettings"><i class="fa-solid fa-floppy-disk"></i> Save changes</button>
+        </div>
+      </div>
+    </section>
+    <footer class="site-footer" style="margin-top:40px">
+      <div class="copyright">© 2025 Salman DRM. All rights reserved.</div>
+    </footer>
+  </main>
+</div>
+
+<script src="assets/ui.js"></script>
+<script type="module">
+import { auth, db, signOut, onAuthStateChanged, SUPER_ADMIN_UID,
+         doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs,
+         onSnapshot, query, orderBy, collectionGroup, isCreatorActive, createUserWithEmailAndPassword,
+         serverTimestamp } from "./assets/firebase.js";
+
+/* ---- Auth guard ---- */
+onAuthStateChanged(auth, u => {
+  if (!u) return location.replace("login.html");
+  if (u.uid !== SUPER_ADMIN_UID) { toast('Not authorized', 'err'); setTimeout(()=>location.replace("creator.html"),800); return; }
+  boot();
+});
+
+document.getElementById('logoutBtn').onclick = async () => {
+  const ok = await confirmModal({ title:'Sign out?', text:'You can sign back in anytime.', confirmLabel:'Sign out', variant:'danger', icon:'fa-right-from-bracket' });
+  if (ok) { await signOut(auth); location.replace('login.html'); }
+};
+
+/* ---- Tabs ---- */
+const tabs = document.querySelectorAll('.nav-item[data-tab]');
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const id = t.dataset.tab;
+  document.querySelectorAll('section[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== id));
+  document.getElementById('pageTitle').textContent = t.textContent.trim();
+}));
+
+bindSidebar();
+
+/* ---- Data state ---- */
+let creatorsCache = [];
+
+function boot(){
+  loadSettings();
+  liveCreators();
+  liveNotifications();
+  liveAllStudents();
+  liveAllCourses();
+  liveAllLicenses();
+  document.getElementById('newCreatorBtn').onclick = openCreatorModal;
+  document.getElementById('addBtnBtn').onclick = () => addBtnRow();
+  document.getElementById('addLinkBtn').onclick = () => addLinkRow();
+  document.getElementById('saveSettings').onclick = saveSettings;
+  document.getElementById('ntTarget').onchange = e => document.getElementById('ntCreatorWrap').classList.toggle('hidden', e.target.value !== 'one');
+  document.getElementById('ntSend').onclick = sendNotification;
+}
+
+/* ---- Dashboard stats ---- */
+function renderStats(){
+  const total = creatorsCache.length;
+  const active = creatorsCache.filter(c => isCreatorActive(c)).length;
+  const blocked = creatorsCache.filter(c => c.status === 'blocked').length;
+  const expired = creatorsCache.filter(c => !isCreatorActive(c) && c.status !== 'blocked').length;
+  document.getElementById('statGrid').innerHTML = [
+    ['Total Creators', total, 'fa-users', 'brand'],
+    ['Active', active, 'fa-circle-check', 'success'],
+    ['Blocked', blocked, 'fa-ban', 'danger'],
+    ['Expired', expired, 'fa-hourglass-end', 'warn'],
+  ].map(([l,v,i]) => `<div class="stat"><i class="fa-solid ${i} icon"></i><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+
+  document.getElementById('recentCreators').innerHTML = creatorsCache.slice(0,5).map(c => `
+    <div class="row"><div class="meta"><h4>${esc(c.name||'—')}</h4><p>${esc(c.email||'')}</p></div>
+      <div>${statusBadge(c)}</div></div>`).join('') || `<div class="empty"><i class="fa-solid fa-users-slash"></i>No creators yet</div>`;
+}
+
+function statusBadge(c){
+  if (c.status === 'blocked') return `<span class="badge no">Blocked</span>`;
+  if (!isCreatorActive(c)) return `<span class="badge warn">Expired</span>`;
+  return `<span class="badge ok">Active · ${fmtDay(c.expiryDate)}</span>`;
+}
+
+/* ---- Creators live ---- */
+function liveCreators(){
+  onSnapshot(query(collection(db, 'creators'), orderBy('createdAt','desc')), snap => {
+    creatorsCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderStats();
+    renderCreatorsList();
+    // populate notification creator dropdown
+    const sel = document.getElementById('ntCreator');
+    sel.innerHTML = creatorsCache.map(c => `<option value="${c.id}">${esc(c.name||c.email||c.id)}</option>`).join('');
+  }, err => { console.error(err); toast('Failed to load creators: '+err.message, 'err'); });
+}
+
+function renderCreatorsList(){
+  const el = document.getElementById('creatorsList');
+  if (!creatorsCache.length) return el.innerHTML = `<div class="empty"><i class="fa-solid fa-user-plus"></i>No creators yet. Click "New Creator" to add one.</div>`;
+  el.innerHTML = creatorsCache.map(c => `
+    <div class="row">
+      <div class="meta">
+        <h4>${esc(c.name||'Unnamed')} ${statusBadge(c)}</h4>
+        <p><i class="fa-solid fa-envelope"></i> ${esc(c.email||'')} · <i class="fa-solid fa-calendar"></i> Since ${fmtDay(c.createdAt)}</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-sm" data-a="extend" data-id="${c.id}"><i class="fa-solid fa-clock"></i> Extend</button>
+        <button class="btn btn-sm" data-a="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i> Edit</button>
+        ${c.status === 'blocked'
+          ? `<button class="btn btn-sm btn-warn" data-a="unblock" data-id="${c.id}"><i class="fa-solid fa-unlock"></i> Unblock</button>`
+          : `<button class="btn btn-sm btn-warn" data-a="block" data-id="${c.id}"><i class="fa-solid fa-ban"></i> Block</button>`}
+        <button class="btn btn-sm btn-danger" data-a="delete" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('button[data-a]').forEach(b => b.onclick = () => creatorAction(b.dataset.a, b.dataset.id));
+}
+
+async function creatorAction(a, id){
+  const c = creatorsCache.find(x=>x.id===id);
+  if (a === 'block' || a === 'unblock') {
+    await updateDoc(doc(db,'creators',id), { status: a==='block'?'blocked':'active' });
+    toast(a==='block'?'Creator blocked':'Creator unblocked', 'ok'); return;
+  }
+  if (a === 'delete') {
+    const ok = await confirmModal({ title:'Delete creator?', text:'This removes their profile document. Their Auth login will remain until you delete it in Firebase Console.', confirmLabel:'Delete' });
+    if (!ok) return;
+    await deleteDoc(doc(db,'creators',id));
+    toast('Creator deleted', 'ok'); return;
+  }
+  if (a === 'extend') return openExtendModal(c);
+  if (a === 'edit')   return openCreatorModal(c);
+}
+
+function expiryFromDays(days){
+  if (days === 'unlimited') return 'unlimited';
+  return Date.now() + Number(days)*24*3600*1000;
+}
+
+function openExtendModal(c){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="muted text-sm mb-8">Current expiry: <b>${fmtDay(c.expiryDate)}</b></div>
+    <label>Add duration</label>
+    <select id="exDays">
+      <option value="7">7 Days</option><option value="15">15 Days</option>
+      <option value="30" selected>30 Days</option><option value="90">90 Days</option>
+      <option value="365">365 Days</option><option value="unlimited">Unlimited</option>
+    </select>`;
+  openModal({
+    title:'Extend duration', subtitle:'Extend from current expiry (or from today if expired).', body: wrap,
+    actions:[
+      { label:'Cancel', variant:'ghost' },
+      { label:'Apply', variant:'primary', icon:'fa-check', onClick: async () => {
+        const v = wrap.querySelector('#exDays').value;
+        let base = Date.now();
+        if (typeof c.expiryDate === 'number' && c.expiryDate > Date.now()) base = c.expiryDate;
+        const expiryDate = v === 'unlimited' ? 'unlimited' : base + Number(v)*24*3600*1000;
+        await updateDoc(doc(db,'creators',c.id), { expiryDate });
+        toast('Duration extended', 'ok');
+      }}
+    ]
+  });
+}
+
+function openCreatorModal(existing){
+  const isEdit = existing && existing.id;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <label>Name</label><input class="input" id="cName" value="${esc(existing?.name||'')}" />
+    <label>Email</label><input class="input" id="cEmail" type="email" value="${esc(existing?.email||'')}" ${isEdit?'disabled':''} />
+    ${isEdit?'':`<label>Password (creator will use this to sign in)</label><input class="input" id="cPass" type="text" placeholder="Min 6 chars" />`}
+    <label>Duration</label>
+    <select id="cDur">
+      <option value="7">7 Days</option><option value="15">15 Days</option>
+      <option value="30" selected>30 Days</option><option value="90">90 Days</option>
+      <option value="365">365 Days</option><option value="unlimited">Unlimited</option>
+    </select>`;
+  openModal({
+    title: isEdit ? 'Edit creator' : 'Create new creator', subtitle: isEdit ? '' : 'A new Firebase Auth user will be created.',
+    body: wrap,
+    actions: [
+      { label:'Cancel', variant:'ghost' },
+      { label: isEdit ? 'Save' : 'Create', variant:'primary', icon:'fa-check', onClick: async () => {
+        const name = wrap.querySelector('#cName').value.trim();
+        const email = wrap.querySelector('#cEmail').value.trim();
+        const dur = wrap.querySelector('#cDur').value;
+        if (!name || !email) { toast('Fill required fields', 'warn'); return false; }
+        if (isEdit) {
+          await updateDoc(doc(db,'creators',existing.id), { name, expiryDate: expiryFromDays(dur) });
+          toast('Creator updated', 'ok');
+        } else {
+          const pass = wrap.querySelector('#cPass').value;
+          if (pass.length < 6) { toast('Password must be at least 6 characters', 'warn'); return false; }
+          // NOTE: createUserWithEmailAndPassword signs you in as that new user; sign back in after.
+          const superUser = auth.currentUser;
+          try {
+            const cred = await createUserWithEmailAndPassword(auth, email, pass);
+            const uid = cred.user.uid;
+            await setDoc(doc(db,'creators',uid), {
+              name, email, status:'active',
+              expiryDate: expiryFromDays(dur),
+              createdAt: Date.now(),
+              settings: { brandColor:'#7c5cff' }
+            });
+            await signOut(auth);
+            toast('Creator created. Please sign back in.', 'ok', 5000);
+            setTimeout(()=>location.replace('login.html'), 1200);
+          } catch (e) {
+            toast(e.code === 'auth/email-already-in-use' ? 'Email already registered' : e.message, 'err', 5000);
+            return false;
+          }
+        }
+      }}
+    ]
+  });
+}
+
+/* ---- All students ---- */
+function liveAllStudents(){
+  onSnapshot(collectionGroup(db, 'students'), snap => {
+    const rows = snap.docs.map(d => {
+      const s = d.data();
+      const creatorId = d.ref.parent.parent.id;
+      const creator = creatorsCache.find(c=>c.id===creatorId);
+      return `<tr>
+        <td>${esc(s.email||'—')}</td><td>${esc(s.name||'—')}</td>
+        <td>${esc(creator?.name||creatorId)}</td>
+        <td>${s.blocked?'<span class="badge no">Blocked</span>':'<span class="badge ok">Active</span>'}</td>
+        <td class="muted text-xs">${fmtDate(s.createdAt)}</td></tr>`;
+    }).join('');
+    document.getElementById('allStudentsBody').innerHTML = rows || `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No students yet</td></tr>`;
+  }, err => console.error(err));
+}
+
+/* ---- All courses ---- */
+function liveAllCourses(){
+  onSnapshot(collectionGroup(db, 'courses'), snap => {
+    const el = document.getElementById('allCoursesGrid');
+    if (snap.empty) return el.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fa-solid fa-book"></i>No courses yet</div>`;
+    el.innerHTML = snap.docs.map(d => {
+      const c = d.data();
+      const creatorId = d.ref.parent.parent.id;
+      const creator = creatorsCache.find(x=>x.id===creatorId);
+      const img = c.image || '';
+      return `<div class="course-card">
+        <div class="thumb ${img?'':'placeholder'}" style="${img?`background-image:url('${esc(img)}')`:''}">
+          ${img?'':'<i class="fa-solid fa-image"></i>'}
+          <span class="price">$${esc(c.price||'0')}</span>
+        </div>
+        <div class="body">
+          <h4>${esc(c.title||'Untitled')}</h4>
+          <p>${esc(c.description||'')}</p>
+          <div class="muted text-xs">by ${esc(creator?.name||creatorId)}</div>
+          <div class="foot"><span class="badge ${c.active?'ok':'no'}">${c.active?'Active':'Inactive'}</span></div>
+        </div></div>`;
+    }).join('');
+  });
+}
+
+/* ---- All licenses ---- */
+function liveAllLicenses(){
+  onSnapshot(collectionGroup(db, 'licenseKeys'), snap => {
+    const rows = snap.docs.map(d => {
+      const k = d.data();
+      const courseRef = d.ref.parent.parent;
+      const creatorId = courseRef.parent.parent.id;
+      const creator = creatorsCache.find(x=>x.id===creatorId);
+      return `<tr><td><code>${esc(k.key)}</code></td>
+        <td>${esc(k.courseTitle||courseRef.id)}</td>
+        <td>${esc(creator?.name||creatorId)}</td>
+        <td>${k.used?'<span class="badge no">Used</span>':'<span class="badge ok">Unused</span>'}</td>
+        <td class="muted text-xs">${esc(k.deviceId||'—')}</td></tr>`;
+    }).join('');
+    document.getElementById('allLicBody').innerHTML = rows || `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No license keys yet</td></tr>`;
+  });
+}
+
+/* ---- Notifications ---- */
+async function sendNotification(){
+  const title = document.getElementById('ntTitle').value.trim();
+  const body  = document.getElementById('ntBody').value.trim();
+  const target= document.getElementById('ntTarget').value;
+  if (!title || !body) return toast('Fill title and message', 'warn');
+  const payload = { title, body, createdAt: Date.now(), from:'super_admin', target, readBy:[] };
+  if (target === 'one') payload.creatorId = document.getElementById('ntCreator').value;
+  await addDoc(collection(db,'notifications'), payload);
+  document.getElementById('ntTitle').value = ''; document.getElementById('ntBody').value = '';
+  toast('Notification sent', 'ok');
+}
+
+function liveNotifications(){
+  onSnapshot(query(collection(db,'notifications'), orderBy('createdAt','desc')), snap => {
+    const html = snap.docs.slice(0,20).map(d => {
+      const n = d.data();
+      return `<div class="notif-item">
+        <div class="flex between"><h5>${esc(n.title)}</h5>
+          <button class="btn btn-sm btn-danger" data-del="${d.id}"><i class="fa-solid fa-trash"></i></button></div>
+        <p>${esc(n.body)}</p>
+        <div class="muted text-xs mt-8">${n.target==='all'?'All creators':'Specific'} · ${fmtDate(n.createdAt)}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('notifHistory').innerHTML = html || `<div class="empty"><i class="fa-solid fa-bell-slash"></i>No notifications yet</div>`;
+    document.getElementById('recentNotifs').innerHTML = snap.docs.slice(0,4).map(d => {
+      const n = d.data();
+      return `<div class="row"><div class="meta"><h4>${esc(n.title)}</h4><p>${esc(n.body)}</p></div><div class="muted text-xs">${fmtDate(n.createdAt)}</div></div>`;
+    }).join('') || `<div class="empty"><i class="fa-solid fa-bell-slash"></i>No notifications yet</div>`;
+    document.querySelectorAll('#notifHistory button[data-del]').forEach(b => b.onclick = async () => {
+      if (await confirmModal({title:'Delete notification?'})) { await deleteDoc(doc(db,'notifications',b.dataset.del)); toast('Deleted','ok'); }
+    });
+  });
+}
+
+/* ---- Settings ---- */
+async function loadSettings(){
+  const snap = await getDoc(doc(db,'admin','config'));
+  const cfg = snap.exists() ? snap.data() : {};
+  document.getElementById('stTitle').value = cfg.panelTitle || 'Salman DRM Premium Courses';
+  document.getElementById('stAnnounce').value = cfg.announcement || '';
+  document.getElementById('stFooterText').value = cfg.footerText || '© Salman DRM';
+  const btns = cfg.footerButtons || [];
+  const lnks = cfg.footerLinks || [];
+  document.getElementById('stBtns').innerHTML = '';
+  btns.forEach(b => addBtnRow(b));
+  document.getElementById('stLinks').innerHTML = '';
+  lnks.forEach(l => addLinkRow(l));
+}
+function addBtnRow(b={label:'',url:''}){
+  const r = document.createElement('div');
+  r.className = 'flex gap-8 mb-8';
+  r.innerHTML = `<input class="input" placeholder="Label" value="${esc(b.label)}" data-f="label" />
+    <input class="input" placeholder="https://…" value="${esc(b.url)}" data-f="url" />
+    <button class="btn btn-sm btn-danger btn-icon"><i class="fa-solid fa-xmark"></i></button>`;
+  r.querySelector('button').onclick = ()=>r.remove();
+  document.getElementById('stBtns').appendChild(r);
+}
+function addLinkRow(l={label:'',url:''}){
+  const r = document.createElement('div');
+  r.className = 'flex gap-8 mb-8';
+  r.innerHTML = `<input class="input" placeholder="Label" value="${esc(l.label)}" data-f="label" />
+    <input class="input" placeholder="https://…" value="${esc(l.url)}" data-f="url" />
+    <button class="btn btn-sm btn-danger btn-icon"><i class="fa-solid fa-xmark"></i></button>`;
+  r.querySelector('button').onclick = ()=>r.remove();
+  document.getElementById('stLinks').appendChild(r);
+}
+function collectRows(id){
+  return [...document.querySelectorAll('#'+id+' > div')].map(r => ({
+    label: r.querySelector('[data-f=label]').value.trim(),
+    url:   r.querySelector('[data-f=url]').value.trim()
+  })).filter(x => x.label && x.url);
+}
+async function saveSettings(){
+  const payload = {
+    panelTitle: document.getElementById('stTitle').value.trim(),
+    announcement: document.getElementById('stAnnounce').value.trim(),
+    footerText: document.getElementById('stFooterText').value.trim(),
+    footerButtons: collectRows('stBtns'),
+    footerLinks: collectRows('stLinks'),
+    updatedAt: Date.now()
+  };
+  await setDoc(doc(db,'admin','config'), payload, { merge: true });
+  toast('Settings saved', 'ok');
+}
+</script>
+</body>
+</html>

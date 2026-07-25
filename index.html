@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Salman DRM — Loading</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="glass auth-card" style="text-align:center">
+    <div class="brand-title" style="font-size:36px;margin-bottom:8px">Salman DRM</div>
+    <div class="muted mb-16">Premium Course Platform</div>
+    <div class="spinner" style="margin:20px auto"></div>
+    <div class="muted text-sm">Checking your session…</div>
+  </div>
+</div>
+<footer style="text-align:center;padding:20px;color:var(--muted);font-size:12px">© 2025 Salman DRM. All rights reserved.</footer>
+<script src="assets/ui.js"></script>
+<script type="module">
+  import { auth, onAuthStateChanged, SUPER_ADMIN_UID } from "./assets/firebase.js";
+  onAuthStateChanged(auth, user => {
+    if (!user) return location.replace("login.html");
+    if (user.uid === SUPER_ADMIN_UID) return location.replace("admin.html");
+    location.replace("creator.html");
+  });
+</script>
+</body>
+</html>
