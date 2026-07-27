@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Salman DRM — Creator Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+</head>
+<body>
+<div class="backdrop"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo brand-title">SALMAN DRM · STUDIO</div>
+    <div class="nav-item active" data-tab="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+    <div class="nav-item" data-tab="courses"><i class="fa-solid fa-book"></i> My Courses</div>
+    <div class="nav-item" data-tab="students"><i class="fa-solid fa-user-graduate"></i> My Students</div>
+    <div class="nav-item" data-tab="licenses"><i class="fa-solid fa-key"></i> License Keys</div>
+    <div class="nav-item" data-tab="share"><i class="fa-solid fa-share-nodes"></i> Student Link</div>
+    <div class="nav-item" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</div>
+    <div style="margin-top:auto">
+      <div class="nav-item" id="logoutBtn" style="color:#fca5a5"><i class="fa-solid fa-right-from-bracket"></i> Sign out</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="flex center gap-12">
+        <button class="btn btn-icon menu-btn"><i class="fa-solid fa-bars"></i></button>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="actions">
+        <div style="position:relative">
+          <button class="btn btn-icon notif-btn" id="notifBtn"><i class="fa-solid fa-bell"></i><span class="dot hidden" id="notifDot">0</span></button>
+          <div class="notif-panel" id="notifPanel"></div>
+        </div>
+        <span class="badge info" id="creatorBadge"><i class="fa-solid fa-user"></i> Creator</span>
+      </div>
+    </div>
+
+    <div id="expiryWarn" class="announce hidden"><i class="fa-solid fa-triangle-exclamation"></i> <span></span></div>
+
+    <!-- DASHBOARD -->
+    <section data-panel="dashboard">
+      <div class="grid cols-4" id="statGrid"></div>
+      <div class="grid cols-2 mt-24">
+        <div class="card"><h3><i class="fa-solid fa-book"></i> Recent Courses</h3><div id="recentCourses"></div></div>
+        <div class="card"><h3><i class="fa-solid fa-user-graduate"></i> Recent Students</h3><div id="recentStudents"></div></div>
+      </div>
+    </section>
+
+    <!-- COURSES -->
+    <section data-panel="courses" class="hidden">
+      <div class="card mb-16 flex between center" style="flex-wrap:wrap;gap:10px">
+        <div><h3 style="margin:0"><i class="fa-solid fa-book"></i> Courses</h3>
+          <div class="muted text-sm">Manage the courses you sell.</div></div>
+        <button class="btn btn-primary" id="newCourseBtn"><i class="fa-solid fa-plus"></i> New Course</button>
+      </div>
+      <div class="grid cols-3" id="coursesGrid"></div>
+    </section>
+
+    <!-- STUDENTS -->
+    <section data-panel="students" class="hidden">
+      <div class="card mb-16 flex between center" style="flex-wrap:wrap;gap:10px">
+        <div><h3 style="margin:0"><i class="fa-solid fa-user-graduate"></i> Students</h3>
+          <div class="muted text-sm">Students who unlocked at least one course automatically appear here.</div></div>
+        <button class="btn btn-primary" id="newStudentBtn"><i class="fa-solid fa-plus"></i> Add Student</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table class="tbl"><thead>
+        <tr><th>Email</th><th>Name</th><th>Status</th><th>Device</th><th>Joined</th><th></th></tr>
+      </thead><tbody id="studentsBody"></tbody></table></div></div>
+    </section>
+
+    <!-- LICENSES -->
+    <section data-panel="licenses" class="hidden">
+      <div class="card mb-16 flex between center" style="flex-wrap:wrap;gap:10px">
+        <div><h3 style="margin:0"><i class="fa-solid fa-key"></i> License Keys</h3>
+          <div class="muted text-sm">Generate keys for any of your courses.</div></div>
+        <button class="btn btn-primary" id="newLicBtn"><i class="fa-solid fa-plus"></i> Generate Keys</button>
+      </div>
+      <div class="card"><div class="table-wrap"><table class="tbl"><thead>
+        <tr><th>Key</th><th>Course</th><th>Status</th><th>Device</th><th></th></tr>
+      </thead><tbody id="licBody"></tbody></table></div></div>
+    </section>
+
+    <!-- SHARE -->
+    <section data-panel="share" class="hidden">
+      <div class="card"><h3><i class="fa-solid fa-share-nodes"></i> Your Student Panel Link</h3>
+        <p class="muted text-sm mb-16">Share this URL with students. They can browse your courses and unlock them with a license key.</p>
+        <div class="flex gap-8">
+          <input class="input" id="shareUrl" readonly />
+          <button class="btn btn-primary" id="copyShare"><i class="fa-solid fa-copy"></i> Copy</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section data-panel="profile" class="hidden">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3><i class="fa-solid fa-id-badge"></i> Profile</h3>
+          <label>Display name</label><input class="input" id="pfName" />
+          <label>Email</label><input class="input" id="pfEmail" disabled />
+          <label>Account expiry</label><input class="input" id="pfExpiry" disabled />
+          <button class="btn btn-primary mt-16" id="saveProfile"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        </div>
+        <div class="card">
+          <h3><i class="fa-solid fa-lock"></i> Change password</h3>
+          <label>Current password</label><input class="input" id="pfOld" type="password" />
+          <label>New password (min 6)</label><input class="input" id="pfNew" type="password" />
+          <button class="btn btn-primary mt-16" id="changePass"><i class="fa-solid fa-key"></i> Update password</button>
+        </div>
+      </div>
+    </section>
+    <footer class="site-footer" style="margin-top:40px">
+      <div class="copyright">© 2025 Salman DRM. All rights reserved.</div>
+    </footer>
+  </main>
+</div>
+
+<script src="assets/ui.js"></script>
+<script type="module">
+import { auth, db, onAuthStateChanged, signOut, SUPER_ADMIN_UID, isCreatorActive,
+         doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, writeBatch,
+         onSnapshot, query, orderBy, where, updatePassword, EmailAuthProvider, reauthenticateWithCredential
+} from "./assets/firebase.js";
+
+let ME = null;
+let MY = null;              // creator doc data
+let coursesCache = [];
+let studentsCache = [];
+let licensesCache = [];
+
+onAuthStateChanged(auth, async u => {
+  if (!u) return location.replace('login.html');
+  if (u.uid === SUPER_ADMIN_UID) return location.replace('admin.html');
+  ME = u;
+  const snap = await getDoc(doc(db,'creators',u.uid));
+  if (!snap.exists()) {
+    toast('Creator profile missing. Contact admin.', 'err', 5000);
+    setTimeout(()=>{ signOut(auth); location.replace('login.html'); }, 1500);
+    return;
+  }
+  MY = snap.data();
+  if (MY.status === 'blocked') {
+    toast('Your account is blocked.', 'err', 5000);
+    setTimeout(()=>{ signOut(auth); location.replace('login.html'); }, 1500);
+    return;
+  }
+  if (!isCreatorActive(MY)) {
+    const w = document.getElementById('expiryWarn');
+    w.classList.remove('hidden');
+    w.querySelector('span').textContent = 'Your subscription has expired. Contact admin to extend.';
+  } else if (typeof MY.expiryDate === 'number') {
+    const days = Math.ceil((MY.expiryDate - Date.now())/86400000);
+    if (days <= 7) {
+      const w = document.getElementById('expiryWarn');
+      w.classList.remove('hidden');
+      w.querySelector('span').textContent = `Your subscription expires in ${days} day(s).`;
+    }
+  }
+  document.getElementById('creatorBadge').innerHTML = `<i class="fa-solid fa-user"></i> ${esc(MY.name||MY.email)}`;
+  document.getElementById('shareUrl').value = location.origin + location.pathname.replace(/[^/]*$/, 'student.html') + '?c=' + u.uid;
+  boot();
+});
+
+document.getElementById('logoutBtn').onclick = async () => {
+  const ok = await confirmModal({ title:'Sign out?', variant:'danger', icon:'fa-right-from-bracket' });
+  if (ok) { await signOut(auth); location.replace('login.html'); }
+};
+document.getElementById('copyShare').onclick = () => {
+  navigator.clipboard.writeText(document.getElementById('shareUrl').value); toast('Link copied', 'ok');
+};
+
+/* Tabs */
+const tabs = document.querySelectorAll('.nav-item[data-tab]');
+tabs.forEach(t => t.addEventListener('click', () => {
+  tabs.forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  const id = t.dataset.tab;
+  document.querySelectorAll('section[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== id));
+  document.getElementById('pageTitle').textContent = t.textContent.trim();
+}));
+bindSidebar();
+
+function boot(){
+  liveCourses(); liveStudents(); liveLicenses(); liveNotifications();
+  document.getElementById('newCourseBtn').onclick = () => openCourseModal();
+  document.getElementById('newStudentBtn').onclick = openStudentModal;
+  document.getElementById('newLicBtn').onclick = openLicenseModal;
+  document.getElementById('saveProfile').onclick = saveProfile;
+  document.getElementById('changePass').onclick = changePassword;
+  document.getElementById('pfName').value = MY.name || '';
+  document.getElementById('pfEmail').value = MY.email || '';
+  document.getElementById('pfExpiry').value = MY.expiryDate === 'unlimited' ? 'Unlimited' : fmtDay(MY.expiryDate);
+  bindNotifPanel();
+}
+
+function renderStats(){
+  const total = coursesCache.length;
+  const active = coursesCache.filter(c=>c.active).length;
+  const students = studentsCache.length;
+  const keys = licensesCache.length;
+  document.getElementById('statGrid').innerHTML = [
+    ['Courses', total, 'fa-book'],
+    ['Active', active, 'fa-circle-check'],
+    ['Students', students, 'fa-user-graduate'],
+    ['License Keys', keys, 'fa-key'],
+  ].map(([l,v,i]) => `<div class="stat"><i class="fa-solid ${i} icon"></i><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+  document.getElementById('recentCourses').innerHTML = coursesCache.slice(0,5).map(c => `
+    <div class="row"><div class="meta"><h4>${esc(c.title)}</h4><p>Rs ${esc(c.price||'0')}</p></div>
+      <span class="badge ${c.active?'ok':'no'}">${c.active?'Active':'Inactive'}</span></div>`).join('')
+      || `<div class="empty"><i class="fa-solid fa-book"></i>No courses yet</div>`;
+  document.getElementById('recentStudents').innerHTML = studentsCache.slice(0,5).map(s => `
+    <div class="row"><div class="meta"><h4>${esc(s.email)}</h4><p>${esc(s.name||'—')}</p></div>
+      <span class="badge ${s.blocked?'no':'ok'}">${s.blocked?'Blocked':'Active'}</span></div>`).join('')
+      || `<div class="empty"><i class="fa-solid fa-user-plus"></i>No students yet</div>`;
+}
+
+/* ---- Courses ---- */
+function liveCourses(){
+  onSnapshot(query(collection(db,'creators',ME.uid,'courses'), orderBy('createdAt','desc')), snap => {
+    coursesCache = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderStats();
+    renderCourses();
+  }, err => { console.error(err); toast(err.message,'err'); });
+}
+
+function renderCourses(){
+  const el = document.getElementById('coursesGrid');
+  if (!coursesCache.length) return el.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fa-solid fa-book"></i>No courses yet. Click "New Course" to create one.</div>`;
+  el.innerHTML = coursesCache.map(c => `
+    <div class="course-card">
+      <div class="thumb ${c.image?'':'placeholder'}" style="${c.image?`background-image:url('${esc(c.image)}')`:''}">
+        ${c.image?'':'<i class="fa-solid fa-image"></i>'}
+        <span class="price">Rs ${esc(c.price||'0')}</span>
+      </div>
+      <div class="body">
+        <h4>${esc(c.title)}</h4>
+        <p>${esc(c.description||'')}</p>
+        <div class="flex gap-8" style="flex-wrap:wrap">
+          <span class="badge ${c.active?'ok':'no'}">${c.active?'Active':'Inactive'}</span>
+        </div>
+        <div class="foot">
+          <button class="btn btn-sm" data-a="edit" data-id="${c.id}"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="btn btn-sm btn-danger" data-a="del" data-id="${c.id}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('button[data-a]').forEach(b => b.onclick = async () => {
+    const c = coursesCache.find(x=>x.id===b.dataset.id);
+    if (b.dataset.a==='edit') {
+      // Fetch private classes for editing
+      try {
+        const vSnap = await getDoc(doc(db,'creators',ME.uid,'courses',c.id,'private','video'));
+        if (vSnap.exists()) {
+          const d = vSnap.data();
+          if (Array.isArray(d.classes) && d.classes.length) c._classes = d.classes;
+          else if (d.videoUrl) c._classes = [{ title:'Class 1', url:d.videoUrl }];
+        }
+      } catch(e){}
+      openCourseModal(c);
+    }
+    else deleteCourse(c);
+  });
+}
+
+async function deleteCourse(c){
+  const ok = await confirmModal({ title:'Delete course?', text:`"${c.title}" will be removed permanently, along with its license keys.` });
+  if (!ok) return;
+  // delete keys
+  const keys = await getDocs(collection(db,'creators',ME.uid,'courses',c.id,'licenseKeys'));
+  const b = writeBatch(db);
+  keys.forEach(k => b.delete(k.ref));
+  b.delete(doc(db,'creators',ME.uid,'courses',c.id));
+  await b.commit();
+  toast('Course deleted', 'ok');
+}
+
+function openCourseModal(existing){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <label>Title</label><input class="input" id="fTitle" value="${esc(existing?.title||'')}" />
+    <label>Description (max 200 words)</label><textarea class="input" id="fDesc">${esc(existing?.description||'')}</textarea>
+    <div class="grid cols-2" style="gap:12px">
+      <div><label>Image URL</label><input class="input" id="fImg" value="${esc(existing?.image||'')}" /></div>
+      <div><label>Price (PKR)</label><input class="input" id="fPrice" placeholder="e.g. 1500" value="${esc(existing?.price||'')}" /></div>
+    </div>
+    <label>Redirect / Buy Now URL</label><input class="input" id="fBuy" value="${esc(existing?.redirect||'')}" placeholder="https://…" />
+    <div class="flex between center" style="margin-top:16px">
+      <label style="margin:0"><i class="fa-solid fa-lock"></i> Classes (Private video links)</label>
+      <button type="button" class="btn btn-sm btn-primary" id="addClassBtn"><i class="fa-solid fa-plus"></i> Add Class</button>
+    </div>
+    <div id="classList" class="mt-8"></div>
+    <div class="muted text-xs" style="margin-top:4px"><i class="fa-solid fa-shield-halved"></i> Stored privately. Students never see these URLs — they load only after a valid license key is validated.</div>
+    <label style="display:flex;align-items:center;gap:8px;text-transform:none;margin-top:12px">
+      <input type="checkbox" id="fActive" ${existing?.active!==false?'checked':''} style="width:auto"/> Active (visible to students)
+    </label>`;
+
+  /* --- Class repeater --- */
+  const listEl = wrap.querySelector('#classList');
+  const rows = (existing?._classes && existing._classes.length) ? existing._classes.slice() : [{ title:'', url:'' }];
+  function renderClassRows(){
+    listEl.innerHTML = rows.map((r,i) => `
+      <div class="class-row" data-i="${i}">
+        <span class="class-num">${i+1}</span>
+        <input class="input" data-f="title" placeholder="Class ${i+1} title" value="${esc(r.title||'')}" />
+        <input class="input" data-f="url" placeholder="Google Drive / YouTube / MP4 link" value="${esc(r.url||'')}" />
+        <button type="button" class="btn btn-icon btn-danger" data-x="${i}" title="Remove"><i class="fa-solid fa-trash"></i></button>
+      </div>`).join('');
+    listEl.querySelectorAll('.class-row').forEach(row => {
+      const i = Number(row.dataset.i);
+      row.querySelectorAll('input[data-f]').forEach(inp => {
+        inp.oninput = () => { rows[i][inp.dataset.f] = inp.value; };
+      });
+      row.querySelector('button[data-x]').onclick = () => {
+        rows.splice(i,1);
+        if (!rows.length) rows.push({ title:'', url:'' });
+        renderClassRows();
+      };
+    });
+  }
+  renderClassRows();
+  wrap.querySelector('#addClassBtn').onclick = () => { rows.push({ title:'', url:'' }); renderClassRows(); };
+
+  openModal({
+    title: existing ? 'Edit course' : 'New course',
+    body: wrap,
+    size: '680px',
+    actions: [
+      { label:'Cancel', variant:'ghost' },
+      { label: existing ? 'Save' : 'Create', variant:'primary', icon:'fa-check', onClick: async () => {
+        const title = wrap.querySelector('#fTitle').value.trim();
+        const desc  = wrap.querySelector('#fDesc').value.trim();
+        const wc = desc ? desc.split(/\s+/).length : 0;
+        if (!title) { toast('Title required','warn'); return false; }
+        if (wc > 200) { toast(`Description too long (${wc} words, max 200)`,'warn'); return false; }
+        const classes = rows
+          .map((r,i) => ({ title: (r.title||'').trim() || `Class ${i+1}`, url: (r.url||'').trim() }))
+          .filter(r => r.url);
+        const payload = {
+          title, description: desc,
+          image: wrap.querySelector('#fImg').value.trim(),
+          price: wrap.querySelector('#fPrice').value.trim(),
+          redirect: wrap.querySelector('#fBuy').value.trim(),
+          active: wrap.querySelector('#fActive').checked,
+          hasVideo: classes.length > 0,
+          classCount: classes.length,
+          updatedAt: Date.now()
+        };
+        let courseId;
+        if (existing) {
+          await updateDoc(doc(db,'creators',ME.uid,'courses',existing.id), payload);
+          courseId = existing.id;
+          toast('Course updated', 'ok');
+        } else {
+          payload.createdAt = Date.now();
+          const ref = await addDoc(collection(db,'creators',ME.uid,'courses'), payload);
+          courseId = ref.id;
+          toast('Course created', 'ok');
+        }
+        // Save the class links PRIVATELY in a subcollection — never returned in course lists
+        await setDoc(doc(db,'creators',ME.uid,'courses',courseId,'private','video'),
+          { classes, videoUrl: classes[0]?.url || '', updatedAt: Date.now() });
+      }}
+    ]
+  });
+}
+
+/* ---- Students ---- */
+function liveStudents(){
+  onSnapshot(query(collection(db,'creators',ME.uid,'students'), orderBy('createdAt','desc')), snap => {
+    studentsCache = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderStats();
+    const rows = studentsCache.map(s => `<tr>
+      <td>${esc(s.email||'—')}</td><td>${esc(s.name||'—')}</td>
+      <td>${s.blocked?'<span class="badge no">Blocked</span>':'<span class="badge ok">Active</span>'}</td>
+      <td class="muted text-xs">${esc(s.deviceId||'—')}</td>
+      <td class="muted text-xs">${fmtDate(s.createdAt)}</td>
+      <td class="actions">
+        <button class="btn btn-sm btn-warn" data-a="${s.blocked?'unblock':'block'}" data-id="${s.id}"><i class="fa-solid fa-${s.blocked?'unlock':'ban'}"></i></button>
+        <button class="btn btn-sm" data-a="reset" data-id="${s.id}" title="Reset device"><i class="fa-solid fa-mobile-screen"></i></button>
+        <button class="btn btn-sm btn-danger" data-a="del" data-id="${s.id}"><i class="fa-solid fa-trash"></i></button>
+      </td></tr>`).join('');
+    document.getElementById('studentsBody').innerHTML = rows || `<tr><td colspan="6" class="muted" style="text-align:center;padding:20px">No students yet</td></tr>`;
+    document.querySelectorAll('#studentsBody button[data-a]').forEach(b => b.onclick = () => studentAction(b.dataset.a, b.dataset.id));
+  });
+}
+
+async function studentAction(a, id){
+  const s = studentsCache.find(x=>x.id===id);
+  if (a === 'block')   { await updateDoc(doc(db,'creators',ME.uid,'students',id),{blocked:true}); toast('Blocked','ok'); }
+  if (a === 'unblock') { await updateDoc(doc(db,'creators',ME.uid,'students',id),{blocked:false}); toast('Unblocked','ok'); }
+  if (a === 'reset')   { await updateDoc(doc(db,'creators',ME.uid,'students',id),{deviceId:''}); toast('Device reset','ok'); }
+  if (a === 'del') {
+    if (!(await confirmModal({title:'Delete student?'}))) return;
+    await deleteDoc(doc(db,'creators',ME.uid,'students',id)); toast('Deleted','ok');
+  }
+}
+
+function openStudentModal(){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <label>Name</label><input class="input" id="sName" />
+    <label>Email</label><input class="input" id="sEmail" type="email" />`;
+  openModal({ title:'Add student', subtitle:'Students are also auto-created when they redeem a license key.', body: wrap,
+    actions:[{label:'Cancel',variant:'ghost'},
+    { label:'Add', variant:'primary', icon:'fa-check', onClick: async () => {
+      const name = wrap.querySelector('#sName').value.trim();
+      const email = wrap.querySelector('#sEmail').value.trim();
+      if (!email) { toast('Email required','warn'); return false; }
+      await addDoc(collection(db,'creators',ME.uid,'students'), { name, email, blocked:false, deviceId:'', createdAt: Date.now() });
+      toast('Student added','ok');
+    }}]});
+}
+
+/* ---- Licenses ---- */
+function liveLicenses(){
+  // aggregate all license keys across courses
+  onSnapshot(collection(db,'creators',ME.uid,'courses'), async () => {
+    // full re-scan on any course change
+    const list = [];
+    for (const c of coursesCache) {
+      const ks = await getDocs(collection(db,'creators',ME.uid,'courses',c.id,'licenseKeys'));
+      ks.forEach(k => list.push({ id: k.id, courseId: c.id, courseTitle: c.title, ...k.data() }));
+    }
+    licensesCache = list;
+    renderStats();
+    renderLicenses();
+  });
+  // Also listen to each course's keys (loose but effective on small scale)
+}
+
+function renderLicenses(){
+  const rows = licensesCache.map(k => `<tr>
+    <td><code>${esc(k.key)}</code></td>
+    <td>${esc(k.courseTitle)}</td>
+    <td>${k.used?'<span class="badge no">Used</span>':'<span class="badge ok">Unused</span>'}</td>
+    <td class="muted text-xs">${esc(k.deviceId||'—')} ${k.studentEmail?'<br>'+esc(k.studentEmail):''}</td>
+    <td class="actions">
+      <button class="btn btn-sm" data-a="copy" data-k="${esc(k.key)}"><i class="fa-solid fa-copy"></i></button>
+      ${k.used?`<button class="btn btn-sm btn-warn" data-a="reset" data-c="${k.courseId}" data-id="${k.id}" title="Free device"><i class="fa-solid fa-rotate"></i></button>`:''}
+      <button class="btn btn-sm btn-danger" data-a="del" data-c="${k.courseId}" data-id="${k.id}"><i class="fa-solid fa-trash"></i></button>
+    </td></tr>`).join('');
+  document.getElementById('licBody').innerHTML = rows || `<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No license keys generated yet</td></tr>`;
+  document.querySelectorAll('#licBody button[data-a]').forEach(b => b.onclick = async () => {
+    const a = b.dataset.a;
+    if (a==='copy') { navigator.clipboard.writeText(b.dataset.k); toast('Copied','ok'); }
+    if (a==='reset') {
+      await updateDoc(doc(db,'creators',ME.uid,'courses',b.dataset.c,'licenseKeys',b.dataset.id), { used:false, deviceId:'', studentEmail:'', activatedAt:null });
+      toast('Key reset','ok');
+    }
+    if (a==='del') {
+      if (!(await confirmModal({title:'Delete key?'}))) return;
+      await deleteDoc(doc(db,'creators',ME.uid,'courses',b.dataset.c,'licenseKeys',b.dataset.id));
+      toast('Deleted','ok');
+    }
+  });
+}
+
+function openLicenseModal(){
+  if (!coursesCache.length) return toast('Create a course first','warn');
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <label>Course</label>
+    <select id="lCourse">${coursesCache.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select>
+    <label>How many keys?</label>
+    <input class="input" id="lCount" type="number" min="1" max="100" value="5" />`;
+  openModal({ title:'Generate license keys', body: wrap,
+    actions:[{label:'Cancel',variant:'ghost'},
+    { label:'Generate', variant:'primary', icon:'fa-key', onClick: async () => {
+      const cid = wrap.querySelector('#lCourse').value;
+      const n = Math.min(100, Math.max(1, Number(wrap.querySelector('#lCount').value)||1));
+      const b = writeBatch(db);
+      for (let i=0;i<n;i++) {
+        const key = genKey('SDRM');
+        const ref = doc(collection(db,'creators',ME.uid,'courses',cid,'licenseKeys'));
+        b.set(ref, { key, used:false, deviceId:'', studentEmail:'', createdAt: Date.now() });
+      }
+      await b.commit();
+      toast(`${n} keys generated`, 'ok');
+    }}]});
+}
+
+/* ---- Profile ---- */
+async function saveProfile(){
+  const name = document.getElementById('pfName').value.trim();
+  await updateDoc(doc(db,'creators',ME.uid), { name });
+  toast('Profile saved','ok');
+}
+async function changePassword(){
+  const oldP = document.getElementById('pfOld').value;
+  const newP = document.getElementById('pfNew').value;
+  if (!oldP || newP.length < 6) return toast('Enter current password and a new one (min 6)','warn');
+  try {
+    const cred = EmailAuthProvider.credential(ME.email, oldP);
+    await reauthenticateWithCredential(ME, cred);
+    await updatePassword(ME, newP);
+    document.getElementById('pfOld').value = ''; document.getElementById('pfNew').value = '';
+    toast('Password updated','ok');
+  } catch (e) {
+    toast(e.code === 'auth/invalid-credential' ? 'Current password wrong' : e.message, 'err', 4500);
+  }
+}
+
+/* ---- Notifications ---- */
+function bindNotifPanel(){
+  const btn = document.getElementById('notifBtn');
+  const panel = document.getElementById('notifPanel');
+  btn.onclick = e => { e.stopPropagation(); panel.classList.toggle('open'); };
+  document.addEventListener('click', e => { if (!panel.contains(e.target) && !btn.contains(e.target)) panel.classList.remove('open'); });
+}
+function liveNotifications(){
+  onSnapshot(query(collection(db,'notifications'), orderBy('createdAt','desc')), snap => {
+    const list = snap.docs.map(d => ({ id:d.id, ...d.data() }))
+      .filter(n => n.target === 'all' || n.creatorId === ME.uid);
+    const unread = list.filter(n => !(n.readBy||[]).includes(ME.uid));
+    const dot = document.getElementById('notifDot');
+    if (unread.length) { dot.classList.remove('hidden'); dot.textContent = unread.length; }
+    else dot.classList.add('hidden');
+    document.getElementById('notifPanel').innerHTML = list.length ? list.slice(0,15).map(n => `
+      <div class="notif-item ${(n.readBy||[]).includes(ME.uid)?'':'unread'}">
+        <h5>${esc(n.title)}</h5>
+        <p>${esc(n.body)}</p>
+        <div class="row-x">
+          <span class="muted text-xs">${fmtDate(n.createdAt)}</span>
+          <div class="flex gap-8">
+            ${(n.readBy||[]).includes(ME.uid)?'':`<button class="btn btn-sm" data-r="${n.id}"><i class="fa-solid fa-check"></i></button>`}
+          </div>
+        </div>
+      </div>`).join('') : `<div class="empty"><i class="fa-solid fa-bell-slash"></i>No notifications</div>`;
+    document.querySelectorAll('#notifPanel button[data-r]').forEach(b => b.onclick = async () => {
+      const n = list.find(x=>x.id===b.dataset.r);
+      const readBy = [...(n.readBy||[]), ME.uid];
+      await updateDoc(doc(db,'notifications',n.id), { readBy });
+    });
+    // toast newest unread on first arrival
+    if (unread.length && !window.__seenNotif) {
+      window.__seenNotif = true;
+      toast(unread[0].title, 'info', 4000);
+    }
+  });
+}
+</script>
+</body>
+</html>

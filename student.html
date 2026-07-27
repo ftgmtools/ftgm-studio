@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title id="pageTitleTag">Salman DRM — Courses</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="assets/theme.css" />
+</head>
+<body>
+
+<header style="width:100%;padding:24px clamp(16px,4vw,40px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);backdrop-filter:blur(10px);background:rgba(6,8,18,.6);position:sticky;top:0;z-index:20;gap:12px;flex-wrap:wrap">
+  <div class="brand-title" id="siteTitle" style="font-size:26px">Salman DRM Premium Courses</div>
+  <div class="flex center gap-8">
+    <div id="studentBadge" class="badge info hidden"><i class="fa-solid fa-user-graduate"></i> <span></span></div>
+    <button id="logoutBtn" class="btn btn-sm hidden" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  </div>
+</header>
+
+<div id="announceWrap" style="max-width:1100px;margin:16px auto 0;padding:0 16px"></div>
+
+<main style="max-width:1100px;margin:24px auto;padding:0 16px 40px">
+  <div id="creatorHead" class="card mb-16 hidden"></div>
+  <div class="grid cols-2" id="courseGrid"></div>
+  <div id="skWrap" class="grid cols-2"></div>
+  <div id="emptyState" class="hidden"></div>
+</main>
+
+<footer class="site-footer" id="footer"></footer>
+
+<div class="player-wrap" id="player">
+  <div class="player-close" id="playerClose"><i class="fa-solid fa-xmark"></i></div>
+  <div class="player-layout">
+    <div id="playerHost" class="player-stage"></div>
+    <aside class="playlist" id="playlist"></aside>
+  </div>
+</div>
+
+<script src="assets/ui.js"></script>
+<script type="module">
+import { auth, db, signInAnonymously, onAuthStateChanged,
+         doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs,
+         onSnapshot, query, where, orderBy, isCreatorActive, getDeviceId
+} from "./assets/firebase.js";
+
+const params = new URLSearchParams(location.search);
+const CREATOR_ID = params.get('c');
+const DEVICE_ID = getDeviceId();
+let CREATOR = null;
+let COURSES = [];
+
+/* Skeleton while loading */
+document.getElementById('skWrap').innerHTML = skeletonCards(4);
+
+/* Auth (anonymous) so we can read/write Firestore under existing rules */
+onAuthStateChanged(auth, u => { if (!u) signInAnonymously(auth).catch(e => toast(e.message,'err')); else boot(); });
+window.addEventListener('DOMContentLoaded', () => {
+  const em = localStorage.getItem('ftgm_student_email');
+  if (em) {
+    const b = document.getElementById('studentBadge');
+    b.classList.remove('hidden'); b.querySelector('span').textContent = em;
+    document.getElementById('logoutBtn').classList.remove('hidden');
+  }
+});
+
+async function boot(){
+  // Global settings
+  const cfg = (await getDoc(doc(db,'admin','config'))).data() || {};
+  document.getElementById('siteTitle').textContent = cfg.panelTitle || 'Salman DRM Premium Courses';
+  document.getElementById('pageTitleTag').textContent = (cfg.panelTitle || 'Salman DRM') + ' — Courses';
+  if (cfg.announcement) document.getElementById('announceWrap').innerHTML =
+    `<div class="announce"><i class="fa-solid fa-bullhorn"></i> ${esc(cfg.announcement)}</div>`;
+  const btns = (cfg.footerButtons||[]).map(b=>`<a class="btn btn-sm btn-primary" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.label)}</a>`).join('');
+  const lnks = (cfg.footerLinks||[]).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ');
+  document.getElementById('footer').innerHTML = `<div class="fbtns">${btns}</div><div>${lnks}</div><div class="mt-8">${esc(cfg.footerText||'© Salman DRM')}</div><div class="copyright">© ${new Date().getFullYear()} Salman DRM. All rights reserved.</div>`;
+
+  if (!CREATOR_ID) {
+    document.getElementById('skWrap').innerHTML = '';
+    document.getElementById('emptyState').classList.remove('hidden');
+    document.getElementById('emptyState').innerHTML = `<div class="empty"><i class="fa-solid fa-link-slash"></i>No creator specified. Ask your creator for a valid link (e.g. <code>?c=CREATOR_ID</code>).</div>`;
+    return;
+  }
+
+  const cSnap = await getDoc(doc(db,'creators',CREATOR_ID));
+  if (!cSnap.exists()) return showFatal('Creator not found.');
+  CREATOR = { id: CREATOR_ID, ...cSnap.data() };
+  if (CREATOR.status === 'blocked' || !isCreatorActive(CREATOR))
+    return showFatal('This creator is currently unavailable.');
+
+  document.getElementById('creatorHead').classList.remove('hidden');
+  document.getElementById('creatorHead').innerHTML =
+    `<div class="flex between center" style="flex-wrap:wrap;gap:10px">
+       <div><h3 style="margin:0">${esc(CREATOR.name||'Creator')}</h3>
+       <div class="muted text-sm">Courses by ${esc(CREATOR.name||CREATOR.email||'')}</div></div>
+       <span class="badge ok"><i class="fa-solid fa-shield-halved"></i> Verified</span>
+     </div>`;
+
+  onSnapshot(query(collection(db,'creators',CREATOR_ID,'courses'), orderBy('createdAt','desc')), snap => {
+    document.getElementById('skWrap').innerHTML = '';
+    COURSES = snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>c.active !== false);
+    renderCourses();
+  }, err => showFatal(err.message));
+}
+
+function showFatal(msg){
+  document.getElementById('skWrap').innerHTML = '';
+  document.getElementById('emptyState').classList.remove('hidden');
+  document.getElementById('emptyState').innerHTML = `<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>${esc(msg)}</div>`;
+}
+
+function renderCourses(){
+  const el = document.getElementById('courseGrid');
+  if (!COURSES.length) { el.innerHTML = `<div class="empty" style="grid-column:1/-1"><i class="fa-solid fa-book"></i>No courses published yet.</div>`; return; }
+  el.innerHTML = COURSES.map(c => `
+    <div class="course-card">
+      <div class="thumb ${c.image?'':'placeholder'}" style="${c.image?`background-image:url('${esc(c.image)}')`:''}">
+        ${c.image?'':'<i class="fa-solid fa-image"></i>'}
+        <span class="price">Rs ${esc(c.price||'0')}</span>
+      </div>
+      <div class="body">
+        <h4>${esc(c.title)}</h4>
+        <p>${esc(c.description||'')}</p>
+        ${c.classCount ? `<div class="flex gap-8" style="flex-wrap:wrap"><span class="badge info"><i class="fa-solid fa-layer-group"></i> ${c.classCount} classes</span></div>` : ''}
+        <div class="foot">
+          <button class="btn btn-primary" style="flex:1" data-id="${c.id}"><i class="fa-solid fa-unlock-keyhole"></i> Get Course</button>
+        </div>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => openCourseModal(COURSES.find(x=>x.id===b.dataset.id)));
+}
+
+function openCourseModal(c){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div style="aspect-ratio:16/8;background:#0a0c18;border-radius:14px;background-image:url('${esc(c.image||'')}');background-size:cover;background-position:center;margin-bottom:14px"></div>
+    <div class="flex between center mb-8"><h3 style="margin:0;font-family:'Anton'">${esc(c.title)}</h3><span class="badge info">Rs ${esc(c.price||'0')}</span></div>
+    <p class="muted" style="font-size:14px;line-height:1.55">${esc(c.description||'')}</p>
+    <label>Enter license key</label>
+    <input class="input" id="lk" placeholder="SDRM-XXXX-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase" />
+    <label>Your email</label>
+    <input class="input" id="se" type="email" placeholder="you@example.com" value="${esc(localStorage.getItem('ftgm_student_email')||'')}" />`;
+  openModal({
+    title:'', body: wrap, size: '620px',
+    actions:[
+      { label:'Buy Now', variant:'ghost', icon:'fa-cart-shopping', onClick: () => {
+          if (!c.redirect) { toast('No purchase link set for this course','warn'); return false; }
+          window.open(c.redirect, '_blank', 'noopener');
+        }},
+      { label:'Unlock Course', variant:'primary', icon:'fa-unlock-keyhole', onClick: async () => {
+          const key = wrap.querySelector('#lk').value.trim().toUpperCase();
+          const email = wrap.querySelector('#se').value.trim().toLowerCase();
+          if (!key) { toast('Enter a license key','warn'); return false; }
+          if (!email) { toast('Enter your email','warn'); return false; }
+          try {
+            await unlockAndPlay(c, key, email);
+          } catch (e) { toast(e.message, 'err', 5000); return false; }
+        }}
+    ]
+  });
+}
+
+async function unlockAndPlay(course, key, email){
+  // find key doc in this course's licenseKeys
+  const q = query(collection(db,'creators',CREATOR_ID,'courses',course.id,'licenseKeys'), where('key','==',key));
+  const snap = await getDocs(q);
+  if (snap.empty) throw new Error('Invalid license key for this course');
+  const kd = snap.docs[0];
+  const k = kd.data();
+  if (k.used && k.deviceId && k.deviceId !== DEVICE_ID) {
+    accessDenied('This key is already active on another device.');
+    throw new Error('Access denied (other device)');
+  }
+  if (!k.used) {
+    await updateDoc(kd.ref, { used:true, deviceId: DEVICE_ID, studentEmail: email, activatedAt: Date.now() });
+  }
+  // Upsert student record under creator
+  const stuQuery = await getDocs(query(collection(db,'creators',CREATOR_ID,'students'), where('email','==',email)));
+  let sid;
+  if (stuQuery.empty) {
+    const r = await addDoc(collection(db,'creators',CREATOR_ID,'students'), {
+      email, name:'', blocked:false, deviceId: DEVICE_ID, createdAt: Date.now(),
+      activatedCourses:{ [course.id]: { key, activatedAt: Date.now() } }
+    });
+    sid = r.id;
+  } else {
+    const s = stuQuery.docs[0];
+    if (s.data().blocked) { accessDenied('Your account has been blocked.'); throw new Error('Blocked'); }
+    const activated = s.data().activatedCourses || {};
+    activated[course.id] = { key, activatedAt: Date.now() };
+    await updateDoc(s.ref, { deviceId: s.data().deviceId || DEVICE_ID, activatedCourses: activated });
+    sid = s.id;
+  }
+  localStorage.setItem('ftgm_student_email', email);
+  const badge = document.getElementById('studentBadge');
+  badge.classList.remove('hidden');
+  badge.querySelector('span').textContent = email;
+  document.getElementById('logoutBtn').classList.remove('hidden');
+  toast('Course unlocked!','ok');
+  // Fetch the private class links only NOW (never included in course listing)
+  let classes = [];
+  try {
+    const vSnap = await getDoc(doc(db,'creators',CREATOR_ID,'courses',course.id,'private','video'));
+    if (vSnap.exists()) {
+      const d = vSnap.data();
+      if (Array.isArray(d.classes) && d.classes.length) classes = d.classes.filter(x => x && x.url);
+      else if (d.videoUrl) classes = [{ title:'Class 1', url:d.videoUrl }];
+    }
+  } catch(e){ console.warn('video fetch failed', e); }
+  openCourse(course, classes);
+}
+
+function accessDenied(msg){
+  openModal({
+    title:'Access Denied',
+    body:`<div style="text-align:center;padding:10px">
+      <div style="width:70px;height:70px;border-radius:50%;background:rgba(239,68,68,.15);color:#fca5a5;display:grid;place-items:center;margin:0 auto 14px;font-size:30px"><i class="fa-solid fa-lock"></i></div>
+      <p class="muted">${esc(msg)}</p></div>`,
+    actions:[{label:'Close', variant:'ghost'}]
+  });
+}
+
+/* ---- Player + Playlist ---- */
+let CURRENT = { course:null, classes:[], index:0 };
+
+function openCourse(course, classes){
+  CURRENT = { course, classes: classes||[], index: 0 };
+  renderPlaylist();
+  document.getElementById('player').classList.add('open');
+  if (CURRENT.classes.length) playIndex(0);
+  else playCourse(course, '');
+}
+
+function renderPlaylist(){
+  const el = document.getElementById('playlist');
+  const { course, classes, index } = CURRENT;
+  if (!classes.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <div class="playlist-head">
+      <h4>${esc(course.title)}</h4>
+      <div class="muted text-xs"><i class="fa-solid fa-layer-group"></i> ${classes.length} class${classes.length>1?'es':''}</div>
+    </div>
+    <div class="playlist-items">
+      ${classes.map((c,i)=>`
+        <button class="playlist-item ${i===index?'active':''}" data-i="${i}">
+          <span class="n">${i+1}</span>
+          <span class="t">${esc(c.title||('Class '+(i+1)))}</span>
+          <i class="fa-solid ${i===index?'fa-circle-play':'fa-play'}"></i>
+        </button>`).join('')}
+    </div>`;
+  el.querySelectorAll('.playlist-item').forEach(b => b.onclick = () => playIndex(Number(b.dataset.i)));
+}
+
+function playIndex(i){
+  const cls = CURRENT.classes[i];
+  if (!cls) return;
+  CURRENT.index = i;
+  renderPlaylist();
+  playCourse(CURRENT.course, cls.url, i);
+}
+
+function playCourse(course, videoUrl, idx=0){
+  const host = document.getElementById('playerHost');
+  host.innerHTML = '';
+  const url = (videoUrl || '').trim();
+  const pid = course.id + '_' + idx;
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
+  if (driveMatch) {
+    host.innerHTML = `<iframe src="https://drive.google.com/file/d/${driveMatch[1]}/preview" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+  } else if (ytMatch) {
+    host.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&modestbranding=1" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+  } else if (/\.(mp4|webm|ogg|m3u8)(\?|$)/i.test(url)) {
+    host.innerHTML = premiumVideoHTML(url, pid);
+    initNativePlayer(pid);
+  } else if (url) {
+    host.innerHTML = `<iframe src="${esc(url)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+  } else {
+    host.innerHTML = `<div style="color:#fff;display:grid;place-items:center;height:100%;text-align:center;padding:20px"><div><i class="fa-solid fa-video-slash" style="font-size:36px;opacity:.6"></i><p class="muted mt-8">No classes added to this course yet. Please contact your creator.</p></div></div>`;
+  }
+  document.getElementById('player').classList.add('open');
+}
+
+document.getElementById('playerClose').onclick = () => {
+  const p = document.getElementById('player');
+  p.classList.remove('open');
+  document.getElementById('playerHost').innerHTML = '';
+  document.getElementById('playlist').innerHTML = '';
+};
+
+/* Logout — clear student session */
+document.getElementById('logoutBtn').onclick = async () => {
+  const ok = await confirmModal({ title:'Sign out?', text:'You will need your license key again to view the course.', confirmLabel:'Sign out', variant:'danger', icon:'fa-right-from-bracket' });
+  if (!ok) return;
+  localStorage.removeItem('ftgm_student_email');
+  document.getElementById('studentBadge').classList.add('hidden');
+  document.getElementById('logoutBtn').classList.add('hidden');
+  toast('Signed out','ok');
+};
+
+/* Block right-click / devtools shortcuts inside the player (best-effort obfuscation) */
+document.getElementById('player').addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('player').classList.contains('open')) return;
+  // Block Ctrl+U / Ctrl+S / F12
+  if (e.key === 'F12' || ((e.ctrlKey||e.metaKey) && ['u','s','i'].includes(e.key.toLowerCase()))) {
+    e.preventDefault();
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('playerClose').click(); });
+
+function premiumVideoHTML(src, id){
+  return `
+    <div style="position:relative;width:100%;height:100%;background:#000">
+      <video id="v_${id}" src="${esc(src)}" playsinline preload="metadata" style="width:100%;height:100%;object-fit:contain;background:#000"></video>
+      <div id="vloader_${id}" style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35)"><div class="spinner" style="width:44px;height:44px;border-width:4px"></div></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 18px;background:linear-gradient(to top, rgba(0,0,0,.85), transparent);color:#fff">
+        <input id="seek_${id}" type="range" min="0" max="1000" value="0" style="width:100%;accent-color:#22d3ee" />
+        <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <button class="btn btn-icon" data-p="play"><i class="fa-solid fa-play"></i></button>
+          <button class="btn btn-icon" data-p="back10" title="-10s"><i class="fa-solid fa-rotate-left"></i></button>
+          <button class="btn btn-icon" data-p="fwd10" title="+10s"><i class="fa-solid fa-rotate-right"></i></button>
+          <span id="time_${id}" style="min-width:100px;font-variant-numeric:tabular-nums">0:00 / 0:00</span>
+          <select data-p="speed" class="input" style="width:auto">
+            <option value="0.5">0.5x</option><option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option><option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option><option value="2">2x</option>
+          </select>
+          <div style="flex:1"></div>
+          <button class="btn btn-icon" data-p="mute"><i class="fa-solid fa-volume-high"></i></button>
+          <button class="btn btn-icon" data-p="pip" title="Picture in Picture"><i class="fa-solid fa-clone"></i></button>
+          <button class="btn btn-icon" data-p="full" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function initNativePlayer(id){
+  const v = document.getElementById('v_'+id);
+  const loader = document.getElementById('vloader_'+id);
+  const seek = document.getElementById('seek_'+id);
+  const time = document.getElementById('time_'+id);
+  const fmt = s => { s = Math.max(0, s|0); const m = (s/60)|0, r = s%60; return m+':'+String(r).padStart(2,'0'); };
+  const key = 'ftgm_progress_'+id;
+  const saved = Number(localStorage.getItem(key)||0);
+  if (saved) v.currentTime = saved;
+  v.addEventListener('canplay', () => { loader.style.display = 'none'; v.play().catch(()=>{}); });
+  v.addEventListener('waiting', () => loader.style.display = 'grid');
+  v.addEventListener('playing', () => loader.style.display = 'none');
+  v.addEventListener('timeupdate', () => {
+    if (v.duration) {
+      seek.value = (v.currentTime/v.duration*1000)|0;
+      time.textContent = fmt(v.currentTime)+' / '+fmt(v.duration);
+      if (((v.currentTime|0) % 3) === 0) localStorage.setItem(key, v.currentTime);
+    }
+  });
+  seek.oninput = () => { if (v.duration) v.currentTime = seek.value/1000*v.duration; };
+  document.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+    const a = b.dataset.p;
+    if (a==='play') { if (v.paused){v.play(); b.innerHTML='<i class="fa-solid fa-pause"></i>'} else {v.pause(); b.innerHTML='<i class="fa-solid fa-play"></i>'} }
+    if (a==='back10') v.currentTime = Math.max(0, v.currentTime-10);
+    if (a==='fwd10')  v.currentTime = Math.min(v.duration||1e9, v.currentTime+10);
+    if (a==='speed')  v.playbackRate = Number(b.value);
+    if (a==='mute')   { v.muted = !v.muted; b.innerHTML = v.muted?'<i class="fa-solid fa-volume-xmark"></i>':'<i class="fa-solid fa-volume-high"></i>'; }
+    if (a==='pip')    { if (document.pictureInPictureElement) document.exitPictureInPicture(); else v.requestPictureInPicture?.().catch(()=>{}); }
+    if (a==='full')   { if (document.fullscreenElement) document.exitFullscreen(); else v.parentElement.requestFullscreen?.().catch(()=>{}); }
+  });
+  // change handler for speed dropdown
+  const sp = document.querySelector('[data-p="speed"]');
+  sp && sp.addEventListener('change', ()=> v.playbackRate = Number(sp.value));
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function h(e){
+    if (!document.getElementById('player').classList.contains('open')) return;
+    if (e.key===' ') { e.preventDefault(); v.paused?v.play():v.pause(); }
+    if (e.key==='ArrowLeft') v.currentTime = Math.max(0, v.currentTime-5);
+    if (e.key==='ArrowRight') v.currentTime = Math.min(v.duration||1e9, v.currentTime+5);
+    if (e.key.toLowerCase()==='f') v.parentElement.requestFullscreen?.();
+    if (e.key.toLowerCase()==='m') v.muted = !v.muted;
+  });
+}
+</script>
+</body>
+</html>
